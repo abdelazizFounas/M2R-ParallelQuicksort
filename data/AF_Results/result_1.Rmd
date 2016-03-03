@@ -1,0 +1,21 @@
+---
+title: "result_1"
+author: "Abdelaziz FOUNAS"
+date: "3 février 2016"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(ggplot2)
+res1 <- read.csv(file="result_1.csv",head=TRUE,sep=",")
+
+
+```
+
+```{r}
+p = ggplot(res1, aes(Size, Time))
+p + geom_point(aes(colour = factor(Type)))
+```
+
+On remarque que avec une petite taille de tableau les différentes versions du quicksort sont assez rapprochés (de 100 à 100000) avec tout de même un avantage pour la version séquentielle. Lorsque l'on passe au million d'éléments, on voit que les versions ont des temps un peu plus dispersés, avec pour les versions built-in et séquentielle qui ont une certaine amplitude au niveau des temps que l'on ne retrouve pas chez la version parallèle. En effet la version parallèle est un peu plus centrée en un point et à un net avantage sur les deux autres versions qui tourne approximativement autour de la seconde.
