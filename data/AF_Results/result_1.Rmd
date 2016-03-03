@@ -1,21 +1,72 @@
 ---
-title: "result_1"
+title: "TD d'évaluation de performances"
 author: "Abdelaziz FOUNAS"
-date: "3 février 2016"
+date: "3 Mars 2016"
 output: html_document
 ---
 
-```{r}
+On souhaite évaluer l'opportunité de remplacer l'implémentation du quicksort de la libc par une version parallèle afin que toutes les applications puissent bénéficier automatiquement des architectures multi-coeurs. L'objectif de ce TD est de répondre à la question suivante :
+
+* À partir de quelle taille de tableau devient-il opportun d'utiliser la version parallèle ?
+
+
+Nous avons un code C exécutant trois différentes versions du quicksort (built-in, parallèle, séquentielle), un script BASH permettant de créer une séance de test notamment en répétant les essais et de changer les tailles des tableaux à trier. Enfin nous avons un script perl permettant d'extraire les données du script et de créer un CSV importable en R.
+
+Après exécution du script et création d'un CSV grâce au perl nous obtenons le fichier resultat_1.csv.
+On peut alors l'importer en R et travailler dessus.
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
 library(dplyr)
 library(ggplot2)
-res1 <- read.csv(file="result_1.csv",head=TRUE,sep=",")
-
-
 ```
+
+Nous l'importons tout d'abord : 
+
+```{r}
+res1 <- read.csv(file="result_1.csv",head=TRUE,sep=",")
+```
+
+Voilà ci-dessous une brève vue du contenu du fichier resultat_1.csv : 
+
+```{r}
+head(res1)
+```
+
+Grâce à la librairie ggplot, nous pouvons avoir un visuel claire de la répartition des résultats selon la taille, le temps et le type :
 
 ```{r}
 p = ggplot(res1, aes(Size, Time))
-p + geom_point(aes(colour = factor(Type)))
+p + geom_point(aes(colour = Type))
 ```
 
-On remarque que avec une petite taille de tableau les différentes versions du quicksort sont assez rapprochés (de 100 à 100000) avec tout de même un avantage pour la version séquentielle. Lorsque l'on passe au million d'éléments, on voit que les versions ont des temps un peu plus dispersés, avec pour les versions built-in et séquentielle qui ont une certaine amplitude au niveau des temps que l'on ne retrouve pas chez la version parallèle. En effet la version parallèle est un peu plus centrée en un point et à un net avantage sur les deux autres versions qui tourne approximativement autour de la seconde.
+On peut zoomer sur les points un peu rapprochés (de 100 à 10000) :
+
+```{r}
+p + geom_point(aes(colour = Type)) + coord_cartesian(xlim = c(0, 11000))
+```
+
+On remarque qu'avec une petite taille de tableau les différentes versions du quicksort sont assez rapprochés (de 100 à 100000) avec tout de même un avantage pour la version séquentielle. En effet, on pourrait expliquer ce léger avantage au fait que la taille du tableau n'est pas assez grande pour bénéficier du calcul parallèle des threads.
+
+Par contre lorsque l'on passe au million d'éléments, on voit que les versions ont des temps un peu plus dispersés, avec pour les versions built-in et séquentielle qui ont une certaine amplitude au niveau des temps que l'on ne retrouve pas chez la version parallèle. En effet la version parallèle est un peu plus centrée en un point et à un net avantage sur les deux autres versions qui tourne approximativement autour de la seconde.
+
+On peut aussi faire le calcul des moyennes des temps selon tous les critères :
+
+```{r}
+res1_mine <- res1 %>% group_by(Size, Type) %>%
+                  select(Time) %>%
+                  summarise( num = n(),
+                        Mean_time = mean(Time),
+                        Time_sd = sd(Time),
+                        Time_se = 2*Time_sd/sqrt(num)
+                  )
+
+ggplot(data = res1_mine,
+    aes(x=Size , y=Mean_time, ymin=Mean_time-Time_se, ymax=Mean_time+Time_se, color=Type) ) +
+    geom_crossbar() +
+    geom_point() +
+    geom_line();
+```
+
+Ça confirme l'explication plus haut, on voit que les versions built-in et séquentielle sont mieux dans les cas de petites tailles de tableaux. Mais la version Parallèle s'en sort de mieux en mieux avec le nombre d'éléments qui augmente.
+
+On peut considérer les croisements des lignes parallèle avec built-in puis parallèle avec séquentielle, comme la version parallèle prenant le dessus sur l'autre version. Ici, la version parallèle est meilleur que la version built-in aux alentours des 250000 éléments, et est meilleure que la version séquentielle aux alentours de 330000 éléments. Tout cela en moyenne car on s'aperçoit ici aussi que les versions built-in et séquentielle sont comme instable dû aux variations qu'elles montrent contrairement encore une fois à la version parallèle qui semble être un peu plus stable à cause des résultats un peu pus agglomérés.
